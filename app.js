@@ -449,7 +449,6 @@ function identifyUser() {
   showAuthScreen();
 }
 
-const ADMIN_PIN_HASH = "61503690505f84b144e6ac89124540a3eb8d22e77db76500984cfc50a1d8776e";
 let pendingLoginName = null;
 let currentAuthStep = "auth-step-name";
 
@@ -489,11 +488,6 @@ async function handleUserNameSubmit() {
 
   pendingLoginName = name;
 
-  if (name.toLowerCase() === "jhon de faria") {
-    showPinVerifyModal("Introduce el PIN de administrador para continuar.");
-    return;
-  }
-
   const existing = state.participants.find(p => p.name.toLowerCase() === name.toLowerCase());
   if (existing && existing.pin) {
     showPinVerifyModal(`Hola, ${existing.name}. Introduce tu PIN para acceder.`);
@@ -532,19 +526,15 @@ async function handlePinSubmit() {
 
   let verified = false;
   const pinHash = await hashPin(pin);
-  if (pendingLoginName.toLowerCase() === "jhon de faria") {
-    verified = pinHash === ADMIN_PIN_HASH;
-  } else {
-    const existing = state.participants.find(p => p.name.toLowerCase() === pendingLoginName.toLowerCase());
-    if (existing) {
-      if (pinHash === existing.pin) {
-        verified = true;
-      } else if (pin === existing.pin) {
-        // plaintext PIN from before hashing was added — upgrade transparently
-        existing.pin = pinHash;
-        await saveParticipant(existing);
-        verified = true;
-      }
+  const existing = state.participants.find(p => p.name.toLowerCase() === pendingLoginName.toLowerCase());
+  if (existing) {
+    if (pinHash === existing.pin) {
+      verified = true;
+    } else if (pin === existing.pin) {
+      // plaintext PIN from before hashing was added — upgrade transparently
+      existing.pin = pinHash;
+      await saveParticipant(existing);
+      verified = true;
     }
   }
 
