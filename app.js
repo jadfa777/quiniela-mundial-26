@@ -39,6 +39,7 @@ let db = null;
 let currentUser = null; // { name, id }
 let currentActiveTab = "dashboard";
 let appInitialized = false;
+let officialMatches = [];
 
 // Flag Emoji Mapper
 const COUNTRY_FLAGS = {
@@ -150,12 +151,51 @@ async function hashPin(pin) {
 function mainRef() { return db.collection("quiniela").doc("main"); }
 function col(name) { return mainRef().collection(name); }
 
+function sortMatches(matches) {
+  return [...matches].sort((a, b) => (a.order || a.id) - (b.order || b.id));
+}
+
+function isPlaceholderTeam(team) {
+  return /^(Ganador|Perdedor|\dº Grupo)/.test(team || "");
+}
+
+function mergeOfficialMatches(savedMatches = []) {
+  if (!officialMatches.length) return sortMatches(savedMatches);
+
+  const savedById = new Map(savedMatches.map(match => [match.id, match]));
+  return sortMatches(officialMatches.map(match => {
+    const saved = savedById.get(match.id);
+    if (!saved) return { ...match };
+
+    const merged = {
+      ...match,
+      scoreA: saved.scoreA ?? null,
+      scoreB: saved.scoreB ?? null,
+      sign: saved.sign || "",
+      winner: saved.winner || ""
+    };
+
+    if (match.phase !== "Grupos") {
+      if (!isPlaceholderTeam(saved.teamA)) merged.teamA = saved.teamA;
+      if (!isPlaceholderTeam(saved.teamB)) merged.teamB = saved.teamB;
+    }
+    return merged;
+  }));
+}
+
+async function loadOfficialMatches() {
+  const response = await fetch("matches.json", { cache: "no-store" });
+  if (!response.ok) throw new Error(`No se pudo cargar matches.json (${response.status})`);
+  officialMatches = sortMatches(await response.json());
+}
+
 async function initApp() {
   firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
 
   document.body.style.opacity = "0.5";
   try {
+    await loadOfficialMatches();
     const mainDoc = await mainRef().get();
 
     if (mainDoc.exists && Array.isArray(mainDoc.data().participants)) {
@@ -163,8 +203,7 @@ async function initApp() {
       await migrateToSubcollections(mainDoc.data());
     } else if (!mainDoc.exists) {
       // First run: seed from matches.json
-      const response = await fetch("matches.json");
-      state.matches = await response.json();
+      state.matches = officialMatches;
       await seedInitialState();
     } else {
       // New subcollection format — load all in parallel
@@ -193,9 +232,7 @@ function assembleState(mainData, partsSnap, predsSnap, bonusSnap, matchesSnap) {
   state.config = (mainData && mainData.config) || state.config;
   state.results = (mainData && mainData.results) || state.results;
   state.participants = partsSnap.docs.map(d => d.data());
-  state.matches = matchesSnap.docs.map(d => d.data()).sort((a, b) =>
-    (a.date + a.time).localeCompare(b.date + b.time) || a.id - b.id
-  );
+  state.matches = mergeOfficialMatches(matchesSnap.docs.map(d => d.data()));
   state.predictions = {};
   predsSnap.docs.forEach(d => { state.predictions[parseInt(d.id)] = d.data(); });
   state.bonus = {};
@@ -242,9 +279,7 @@ function setupFirestoreListeners() {
 
   col("matches").onSnapshot(snap => {
     if (!appInitialized) return;
-    state.matches = snap.docs.map(d => d.data()).sort((a, b) =>
-      (a.date + a.time).localeCompare(b.date + b.time) || a.id - b.id
-    );
+    state.matches = mergeOfficialMatches(snap.docs.map(d => d.data()));
     if (!["predictions", "matches"].includes(currentActiveTab)) renderCurrentTab();
   });
 }
@@ -261,7 +296,7 @@ async function migrateToSubcollections(oldData) {
   state.config = oldData.config || state.config;
   state.results = oldData.results || state.results;
   state.participants = oldData.participants || [];
-  state.matches = oldData.matches || [];
+  state.matches = mergeOfficialMatches(oldData.matches || []);
   state.predictions = oldData.predictions || {};
   state.bonus = oldData.bonus || {};
 
@@ -750,7 +785,7 @@ function renderDashboard() {
                   <span>Fase: ${m.phase} ${m.group ? `(Grupo ${m.group})` : ''}</span>
                 </div>
               </div>
-              <span class="recent-badge btn-secondary" style="font-size: 0.75rem">${m.date} - ${m.time}</span>
+              <span class="recent-badge btn-secondary" style="font-size: 0.75rem">${formatMatchSchedule(m)}</span>
             </div>
           `).join('')}
           ${state.matches.filter(m => m.scoreA === null && m.scoreB === null).length === 0 ? 
@@ -969,7 +1004,7 @@ function renderMatches() {
           <div class="match-card" data-match-id="${m.id}">
             <div class="match-header">
               <span class="match-badge">${m.phase} ${m.group ? `• Grupo ${m.group}` : ''}</span>
-              <span class="match-time">ID: ${m.id} | ${m.date || 'TBD'} ${m.time || ''}</span>
+              <span class="match-time">Juego ${m.order || m.id} | ${formatMatchSchedule(m)}</span>
             </div>
             
             <div class="match-teams-container">
@@ -1008,7 +1043,7 @@ function renderMatches() {
             
             <div class="match-footer" style="padding-top:0.5rem; border:none; margin-top:0;">
               <span style="font-size:0.75rem; color:var(--text-muted)">
-                Resultado: ${hasScore ? (m.scoreA > m.scoreB ? 'Gana A' : m.scoreA < m.scoreB ? 'Gana B' : 'Empate') : 'Pendiente'}
+                ${m.venue ? `${m.venue} · ` : ''}Resultado: ${hasScore ? (m.scoreA > m.scoreB ? 'Gana A' : m.scoreA < m.scoreB ? 'Gana B' : 'Empate') : 'Pendiente'}
               </span>
             </div>
           </div>
@@ -1074,8 +1109,8 @@ async function saveMatchesScores() {
 
 async function propagateKnockoutTeams() {
   // Let's build a mapping of matches to set team names dynamically
-  // 73 is 1A vs 3C/D/E
-  // 89 is Winner 73 vs Winner 74, etc.
+  // 73 is 2A vs 2B
+  // 89 is Winner 74 vs Winner 77, etc.
   const changed = [];
 
   const getWinnerOfMatch = (id) => {
@@ -1092,18 +1127,18 @@ async function propagateKnockoutTeams() {
   // Map of next matches: targetMatchId: { teamASource: matchId/string, teamBSource: matchId/string }
   // We specify source. If number, it means winner of that match. If "loser-number", loser of that match.
   const knockoutPropagationMap = {
-    89: { A: 73, B: 74 },
-    90: { A: 75, B: 76 },
-    91: { A: 77, B: 78 },
+    89: { A: 74, B: 77 },
+    90: { A: 73, B: 75 },
+    91: { A: 76, B: 78 },
     92: { A: 79, B: 80 },
-    93: { A: 81, B: 82 },
-    94: { A: 83, B: 84 },
-    95: { A: 85, B: 86 },
-    96: { A: 87, B: 88 },
+    93: { A: 83, B: 84 },
+    94: { A: 81, B: 82 },
+    95: { A: 86, B: 88 },
+    96: { A: 85, B: 87 },
     
     97: { A: 89, B: 90 },
-    98: { A: 91, B: 92 },
-    99: { A: 93, B: 94 },
+    98: { A: 93, B: 94 },
+    99: { A: 91, B: 92 },
     100: { A: 95, B: 96 },
     
     101: { A: 97, B: 98 },
@@ -1252,7 +1287,7 @@ function renderPredictions() {
           <div class="match-card${locked ? ' match-locked' : ''}" data-match-id="${m.id}">
             <div class="match-header">
               <span class="match-badge">${m.phase} ${m.group ? `• Grupo ${m.group}` : ''}</span>
-              <span class="match-time">${m.date || ''} ${m.time || ''}</span>
+              <span class="match-time">Juego ${m.order || m.id} | ${formatMatchSchedule(m)}</span>
             </div>
 
             ${locked ? `
@@ -1293,7 +1328,7 @@ function renderPredictions() {
 
             <div class="match-footer">
               <span class="real-score-indicator">
-                Real:
+                ${m.venue ? `${m.venue} · ` : ''}Real:
                 <span class="real-score-badge">${hasOfficial ? `${m.scoreA} - ${m.scoreB}` : 'Pendiente'}</span>
                 ${hasOfficial && isKnockout ? `<span style="font-weight: 500; font-size:0.7rem;">(${m.winner})</span>` : ''}
               </span>
@@ -1740,9 +1775,15 @@ function isAdmin() {
   return currentUser && currentUser.name.trim().toLowerCase() === "jhon de faria";
 }
 
+function formatMatchSchedule(m) {
+  if (!m.date) return "Fecha pendiente";
+  if (!m.time) return `${m.date} · hora pendiente`;
+  return `${m.date} · ${m.time}${m.timezone ? ` ${m.timezone}` : ""}`;
+}
+
 function isMatchLocked(m) {
-  if (!m.date || !m.time) return false;
-  return Date.now() >= new Date(`${m.date}T${m.time}:00`).getTime();
+  if (!m.kickoff && (!m.date || !m.time)) return false;
+  return Date.now() >= new Date(m.kickoff || `${m.date}T${m.time}:00${m.utcOffset || ""}`).getTime();
 }
 
 function updateAdminUI() {
