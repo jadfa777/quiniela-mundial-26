@@ -1928,3 +1928,11 @@ nav {
   cursor: not-allowed;
   transform: none;
 }
+@media (max-width: 767px) {
+  .fab-save {
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px) + 0.75rem);
+    right: 1rem;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+  }
+}
