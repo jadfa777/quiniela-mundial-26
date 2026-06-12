@@ -31,6 +31,8 @@
       <button class="tab-btn" id="tab-bonus"><span class="tab-icon">⭐</span><span class="tab-label">Podio</span></button>
       <button class="tab-btn" id="tab-config"><span class="tab-icon">⚙️</span><span class="tab-label">Reglas</span></button>
       <button class="tab-btn" id="tab-data"><span class="tab-icon">💾</span><span class="tab-label">Respaldo</span></button>
+      <!-- More button: only shown on mobile -->
+      <button id="btn-nav-more" onclick="toggleNavMore()"><span class="tab-icon">···</span><span class="tab-label">Más</span></button>
     </nav>
     <!-- Header Actions (Quick Actions) -->
     <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -122,6 +124,15 @@
   <button id="btn-save-predictions-fab" class="fab-save" style="display:none;" onclick="savePredictions()">
     💾 Guardar
   </button>
+
+  <!-- Mobile "More" submenu -->
+  <div id="nav-more-overlay" style="display:none;position:fixed;inset:0;z-index:190;" onclick="closeNavMore()"></div>
+  <div id="nav-more-menu" class="nav-more-menu" style="display:none;">
+    <button id="nav-more-participants" onclick="closeNavMore();switchTab('participants')"><span>👥</span> Amigos</button>
+    <button id="nav-more-bonus"        onclick="closeNavMore();switchTab('bonus')"><span>⭐</span> Podio</button>
+    <button id="nav-more-config"       onclick="closeNavMore();switchTab('config')"><span>⚙️</span> Reglas</button>
+    <button id="nav-more-data"         onclick="closeNavMore();switchTab('data')"><span>💾</span> Respaldo</button>
+  </div>
   <!-- Auth Screen: Full-page login / sign-up -->
   <div id="auth-screen" class="auth-screen">
     <!-- Animated background orbs -->
@@ -193,5 +204,42 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <!-- Script inclusion -->
   <script src="app.js"></script>
+
+  <!-- Mobile "More" menu logic -->
+  <script>
+  (function () {
+    var MORE_TABS = ['participants', 'bonus', 'config', 'data'];
+
+    window.toggleNavMore = function () {
+      var menu = document.getElementById('nav-more-menu');
+      var overlay = document.getElementById('nav-more-overlay');
+      var btn = document.getElementById('btn-nav-more');
+      var open = menu.style.display !== 'none';
+      menu.style.display = open ? 'none' : 'flex';
+      overlay.style.display = open ? 'none' : 'block';
+      if (btn) btn.classList.toggle('active', !open);
+    };
+
+    window.closeNavMore = function () {
+      document.getElementById('nav-more-menu').style.display = 'none';
+      document.getElementById('nav-more-overlay').style.display = 'none';
+      var btn = document.getElementById('btn-nav-more');
+      if (btn) btn.classList.remove('active');
+    };
+
+    // Patch switchTab to sync more-button active state
+    var _orig = window.switchTab;
+    window.switchTab = function (tabId) {
+      _orig(tabId);
+      closeNavMore();
+      var moreBtn = document.getElementById('btn-nav-more');
+      if (moreBtn) moreBtn.classList.toggle('active', MORE_TABS.indexOf(tabId) !== -1);
+      MORE_TABS.forEach(function (id) {
+        var el = document.getElementById('nav-more-' + id);
+        if (el) el.classList.toggle('active', id === tabId);
+      });
+    };
+  })();
+  </script>
 </body>
 </html>

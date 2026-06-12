@@ -1936,3 +1936,77 @@ nav {
     font-size: 0.9rem;
   }
 }
+
+/* =====================================================
+   Mobile bottom-nav: "More" button + popup submenu
+   ===================================================== */
+
+/* More button hidden on desktop */
+#btn-nav-more { display: none; }
+
+@media (max-width: 767px) {
+  /* Hide secondary tabs from bottom nav strip */
+  header nav #tab-participants,
+  header nav #tab-bonus,
+  header nav #tab-config,
+  header nav #tab-data { display: none !important; }
+
+  /* More button inherits bottom-nav tab styling */
+  #btn-nav-more {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    padding: 0.35rem 0.3rem;
+    min-width: 50px;
+    flex: 1;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition-fast);
+  }
+  #btn-nav-more .tab-icon { font-size: 1.4rem; line-height: 1; display: block; }
+  #btn-nav-more .tab-label { font-size: 0.56rem; line-height: 1; display: block; }
+  #btn-nav-more.active { background: rgba(16,185,129,0.15); color: var(--accent-emerald); }
+
+  /* Popup submenu */
+  .nav-more-menu {
+    position: fixed;
+    bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+    right: 0.5rem;
+    z-index: 210;
+    background: rgba(13, 18, 30, 0.97);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 0.4rem;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 170px;
+    box-shadow: 0 -4px 28px rgba(0,0,0,0.55);
+    animation: fadeIn 0.15s ease;
+  }
+  .nav-more-menu button {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 1rem;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 10px;
+    width: 100%;
+    text-align: left;
+    transition: background 0.15s ease;
+  }
+  .nav-more-menu button:hover { background: rgba(255,255,255,0.07); }
+  .nav-more-menu button.active { background: rgba(16,185,129,0.15); color: var(--accent-emerald); }
+}
