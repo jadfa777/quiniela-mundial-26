@@ -624,6 +624,10 @@ function switchTab(tabId) {
     targetBtn.classList.add("active");
   }
 
+  // Show/hide floating save button
+  const fab = document.getElementById("btn-save-predictions-fab");
+  if (fab) fab.style.display = tabId === "predictions" ? "block" : "none";
+
   // Render content dynamically based on selected tab
   if (tabId === "dashboard") renderDashboard();
   else if (tabId === "participants") renderParticipants();
@@ -1376,7 +1380,9 @@ async function savePredictions() {
   if (!pId) return;
 
   const btn = document.getElementById("btn-save-predictions");
+  const fab = document.getElementById("btn-save-predictions-fab");
   if (btn) { btn.disabled = true; btn.textContent = "⏳ Guardando..."; }
+  if (fab) { fab.disabled = true; fab.textContent = "⏳ Guardando..."; }
 
   try {
     await col("predictions").doc(String(pId)).set(state.predictions[pId] || {});
@@ -1385,6 +1391,7 @@ async function savePredictions() {
     showToast("Error al guardar pronósticos.", "error");
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = "💾 Guardar Pronósticos"; }
+    if (fab) { fab.disabled = false; fab.textContent = "💾 Guardar"; }
   }
 }
 
