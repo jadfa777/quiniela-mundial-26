@@ -1904,8 +1904,8 @@ nav {
   bottom: 1.5rem;
   right: 1.5rem;
   z-index: 900;
-  background: var(--accent);
-  color: #000;
+  background: #10b981;
+  color: #ffffff;
   border: none;
   border-radius: 2rem;
   padding: 0.85rem 1.5rem;
