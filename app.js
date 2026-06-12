@@ -1281,7 +1281,7 @@ function renderPredictions() {
             </div>
 
             ${locked ? `
-              <div class="lock-banner">🔒 Pronóstico cerrado — el partido ya ha comenzado</div>
+              <div class="lock-banner">🔒 Pronóstico cerrado</div>
             ` : ''}
 
             <div class="match-teams-container">
