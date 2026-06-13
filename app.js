@@ -1334,6 +1334,7 @@ function renderPredictions() {
                 <span class="points-pill points-zero" style="font-size: 0.7rem">Por jugar</span>
               `}
             </div>
+            ${locked ? renderOthersPreds(m, hasOfficial) : ''}
           </div>
         `;
       }).join('')}
@@ -1394,6 +1395,15 @@ async function savePredictions() {
     if (fab) { fab.disabled = false; fab.textContent = "💾 Guardar"; }
   }
 }
+
+window.toggleOthersPreds = function(matchId, toggleEl) {
+  const panel = document.getElementById('others-preds-' + matchId);
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  const arrow = toggleEl.querySelector('.others-arrow');
+  if (arrow) arrow.textContent = isOpen ? '▾' : '▴';
+};
 
 // --- Ranking / Tabla de Posiciones Module ---
 function calculateScores() {
@@ -1781,6 +1791,46 @@ function formatMatchSchedule(m) {
 function isMatchLocked(m) {
   if (!m.kickoff && (!m.date || !m.time)) return false;
   return Date.now() >= new Date(m.kickoff || `${m.date}T${m.time}:00${m.utcOffset || ""}`).getTime();
+}
+
+function calcPredPoints(pred, m) {
+  if (pred.scoreA === null || pred.scoreB === null || m.scoreA === null || m.scoreB === null) return null;
+  const isExact = pred.scoreA === m.scoreA && pred.scoreB === m.scoreB;
+  const predSign = pred.scoreA > pred.scoreB ? "1" : pred.scoreA < pred.scoreB ? "2" : "X";
+  let pts = 0;
+  if (isExact) pts += state.config.exactScore;
+  else if (predSign === m.sign) pts += state.config.outcome;
+  if (m.phase !== "Grupos" && pred.winner && pred.winner === m.winner) pts += state.config.qualifier;
+  return pts;
+}
+
+function renderOthersPreds(m, hasOfficial) {
+  const isKo = m.phase !== "Grupos";
+  const rows = state.participants.map(p => {
+    const pp = (state.predictions[p.id] || {})[m.id] || { scoreA: null, scoreB: null, winner: "" };
+    const hasScore = pp.scoreA !== null && pp.scoreB !== null;
+    const pts = (hasOfficial && hasScore) ? calcPredPoints(pp, m) : null;
+    const isMe = p.id === activePredictionParticipantId;
+    return `
+      <tr class="${isMe ? 'others-row-me' : ''}">
+        <td>${isMe ? '★ ' : ''}${escapeHtml(p.name)}</td>
+        <td class="others-score">${hasScore ? `${pp.scoreA} - ${pp.scoreB}` : '<span class="no-pred">—</span>'}</td>
+        ${isKo ? `<td class="others-winner">${pp.winner ? escapeHtml(pp.winner) : '<span class="no-pred">—</span>'}</td>` : ''}
+        <td class="others-pts">${pts !== null ? `<span class="pts-badge ${pts > 0 ? 'pts-pos' : 'pts-zero-b'}">${pts > 0 ? '+' : ''}${pts}</span>` : '<span class="no-pred">—</span>'}</td>
+      </tr>`;
+  }).join('');
+  return `
+    <div class="others-preds-toggle" onclick="toggleOthersPreds(${m.id}, this)">
+      <span>👁 Ver pronósticos de todos</span><span class="others-arrow">▾</span>
+    </div>
+    <div class="others-preds-panel" id="others-preds-${m.id}" style="display:none;">
+      <table class="others-table">
+        <thead><tr>
+          <th>Participante</th><th>Marcador</th>${isKo ? '<th>Clasifica</th>' : ''}<th>Pts</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 }
 
 function updateAdminUI() {
