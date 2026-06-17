@@ -1519,21 +1519,25 @@ window.showParticipantHistory = function(participantId) {
       const pred = pPreds[m.id];
       const hasOfficial = m.scoreA !== null && m.scoreB !== null;
       const hasPred = pred && pred.scoreA !== null && pred.scoreB !== null;
+      const locked = isMatchLocked(m);
       let pts = null;
-      if (hasOfficial && hasPred) {
+      if (locked && hasOfficial && hasPred) {
         pts = calcPredPoints(pred, m);
         totalPts += pts;
         totalPreds++;
         if (pts >= state.config.exactScore) totalExacts++;
-      } else if (hasPred) {
+      } else if (locked && hasPred) {
         totalPreds++;
       }
       const ptsBadge = pts !== null
         ? `<span class="pts-badge ${pts >= state.config.exactScore ? 'pts-pos' : pts > 0 ? 'pts-sign' : 'pts-zero-b'}">${pts > 0 ? '+' : ''}${pts}</span>`
         : hasOfficial ? '<span class="no-pred">—</span>' : '';
-      const predCell = hasPred
-        ? `${pred.scoreA} - ${pred.scoreB}${m.phase !== 'Grupos' && pred.winner ? ` <em class="hist-winner">(${escapeHtml(pred.winner)})</em>` : ''}`
-        : '<span class="no-pred">Sin pronóstico</span>';
+      const locked = isMatchLocked(m);
+      const predCell = !locked
+        ? '<span class="no-pred">No iniciado</span>'
+        : hasPred
+          ? `${pred.scoreA} - ${pred.scoreB}${m.phase !== 'Grupos' && pred.winner ? ` <em class="hist-winner">(${escapeHtml(pred.winner)})</em>` : ''}`
+          : '<span class="no-pred">Sin pronóstico</span>';
       const resultCell = hasOfficial ? `${m.scoreA} - ${m.scoreB}` : '<span class="no-pred">Pendiente</span>';
       return `<tr>
         <td class="hist-match">${escapeHtml(m.teamA)} vs ${escapeHtml(m.teamB)}</td>
