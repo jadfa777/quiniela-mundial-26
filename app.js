@@ -1532,7 +1532,6 @@ window.showParticipantHistory = function(participantId) {
       const ptsBadge = pts !== null
         ? `<span class="pts-badge ${pts >= state.config.exactScore ? 'pts-pos' : pts > 0 ? 'pts-sign' : 'pts-zero-b'}">${pts > 0 ? '+' : ''}${pts}</span>`
         : hasOfficial ? '<span class="no-pred">—</span>' : '';
-      const locked = isMatchLocked(m);
       const predCell = !locked
         ? '<span class="no-pred">No iniciado</span>'
         : hasPred
