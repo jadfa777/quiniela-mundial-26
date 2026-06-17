@@ -1937,6 +1937,27 @@ nav {
   }
 }
 
+/* === Dashboard: clickable upcoming match cards === */
+.recent-item-clickable {
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+  border-radius: var(--radius-sm);
+}
+.recent-item-clickable:hover {
+  background: rgba(16, 185, 129, 0.07);
+  transform: translateX(3px);
+}
+
+/* === Prediction card highlight flash === */
+@keyframes matchFlash {
+  0%   { box-shadow: 0 0 0 3px rgba(16,185,129,0.7); }
+  60%  { box-shadow: 0 0 0 6px rgba(16,185,129,0.25); }
+  100% { box-shadow: none; }
+}
+.match-highlight {
+  animation: matchFlash 1.5s ease forwards;
+}
+
 /* === Others' Predictions (locked matches) === */
 .others-preds-toggle {
   display: flex;

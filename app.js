@@ -691,6 +691,20 @@ function updateNavigation() {
 }
 
 // --- Dashboard Module ---
+window.goToPrediction = function(matchId) {
+  activePredictionPhaseFilter = "Todos";
+  switchTab("predictions");
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const card = document.querySelector(`.match-card[data-match-id="${matchId}"]`);
+      if (!card) return;
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+      card.classList.add("match-highlight");
+      setTimeout(() => card.classList.remove("match-highlight"), 1500);
+    });
+  });
+};
+
 function renderDashboard() {
   const container = document.getElementById("sec-dashboard");
   
@@ -771,7 +785,7 @@ function renderDashboard() {
         <h3 class="panel-title">📅 Próximos Partidos</h3>
         <div class="recent-matches-list">
           ${state.matches.filter(m => m.scoreA === null && m.scoreB === null).slice(0, 4).map(m => `
-            <div class="recent-item">
+            <div class="recent-item recent-item-clickable" onclick="goToPrediction(${m.id})">
               <div class="recent-info">
                 <div class="recent-icon">⚽</div>
                 <div class="recent-text">
@@ -779,7 +793,7 @@ function renderDashboard() {
                   <span>Fase: ${m.phase} ${m.group ? `(Grupo ${m.group})` : ''}</span>
                 </div>
               </div>
-              <span class="recent-badge btn-secondary" style="font-size: 0.75rem">${formatMatchSchedule(m)}</span>
+              <span class="recent-badge btn-secondary" style="font-size: 0.75rem">${formatMatchSchedule(m)} →</span>
             </div>
           `).join('')}
           ${state.matches.filter(m => m.scoreA === null && m.scoreB === null).length === 0 ? 
