@@ -118,6 +118,17 @@
   </div>
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
+
+  <!-- Modal: Participant Prediction History -->
+  <div id="modal-history-overlay" class="modal-overlay" onclick="if(event.target===this)closeHistoryModal()">
+    <div class="modal modal--wide">
+      <div class="modal-header">
+        <h3 class="modal-title" id="hist-modal-name"></h3>
+        <button class="modal-close" onclick="closeHistoryModal()">&times;</button>
+      </div>
+      <div id="hist-modal-body"></div>
+    </div>
+  </div>
   <!-- Floating Save Button (predictions tab) -->
   <button id="btn-save-predictions-fab" class="fab-save" style="display:none;" onclick="savePredictions()">
     💾 Guardar

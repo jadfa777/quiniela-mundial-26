@@ -2026,3 +2026,29 @@ nav {
 .form-outcome { background: rgba(6,182,212,0.18);  color: var(--accent-cyan); }
 .form-zero    { background: rgba(255,255,255,0.07); color: var(--text-muted); }
 .form-miss    { background: transparent; color: var(--text-muted); opacity: 0.5; }
+
+/* Ranking: nombre clickable */
+.rank-name-link { cursor: pointer; transition: color 0.15s ease; }
+.rank-name-link:hover { color: var(--accent-emerald); text-decoration: underline; text-underline-offset: 3px; }
+
+/* Modal wide (historial de pronósticos) */
+.modal--wide { max-width: 680px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
+.modal--wide .modal-header { flex-shrink: 0; }
+.hist-summary { display: flex; gap: 1rem; flex-wrap: wrap; padding: 0.75rem 0; margin-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); }
+.hist-stat { font-size: 0.85rem; color: var(--text-secondary); }
+.hist-stat strong { color: var(--text-primary); font-weight: 700; }
+.hist-table-wrap { overflow-y: auto; max-height: calc(85vh - 180px); padding-bottom: 1.5rem; }
+.hist-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.hist-table th { text-align: left; padding: 0.4rem 0.6rem; color: var(--text-muted); font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: #0f172a; }
+.hist-table td { padding: 0.45rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--text-secondary); }
+.hist-phase-row td { padding: 0.6rem 0.6rem 0.3rem; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--accent-cyan); background: rgba(6,182,212,0.05); }
+.hist-match { color: var(--text-primary); font-weight: 500; }
+.hist-pred { color: var(--text-secondary); }
+.hist-result { color: var(--text-secondary); }
+.hist-pts { text-align: center; }
+.hist-winner { font-size: 0.75rem; color: var(--text-muted); font-style: italic; }
+.pts-sign { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+@media (max-width: 767px) {
+  .modal--wide { max-width: 98vw; max-height: 92vh; }
+  .hist-table-wrap { max-height: calc(92vh - 160px); }
+}

@@ -1505,6 +1505,68 @@ function calculateScores() {
   return scores;
 }
 
+window.showParticipantHistory = function(participantId) {
+  const participant = state.participants.find(p => p.id === participantId);
+  if (!participant) return;
+  const pPreds = state.predictions[participantId] || {};
+
+  const phases = [...new Set(state.matches.map(m => m.phase))];
+  let totalPts = 0, totalPreds = 0, totalExacts = 0;
+
+  const phaseBlocks = phases.map(phase => {
+    const phaseMatches = state.matches.filter(m => m.phase === phase);
+    const rows = phaseMatches.map(m => {
+      const pred = pPreds[m.id];
+      const hasOfficial = m.scoreA !== null && m.scoreB !== null;
+      const hasPred = pred && pred.scoreA !== null && pred.scoreB !== null;
+      let pts = null;
+      if (hasOfficial && hasPred) {
+        pts = calcPredPoints(pred, m);
+        totalPts += pts;
+        totalPreds++;
+        if (pts >= state.config.exactScore) totalExacts++;
+      } else if (hasPred) {
+        totalPreds++;
+      }
+      const ptsBadge = pts !== null
+        ? `<span class="pts-badge ${pts >= state.config.exactScore ? 'pts-pos' : pts > 0 ? 'pts-sign' : 'pts-zero-b'}">${pts > 0 ? '+' : ''}${pts}</span>`
+        : hasOfficial ? '<span class="no-pred">—</span>' : '';
+      const predCell = hasPred
+        ? `${pred.scoreA} - ${pred.scoreB}${m.phase !== 'Grupos' && pred.winner ? ` <em class="hist-winner">(${escapeHtml(pred.winner)})</em>` : ''}`
+        : '<span class="no-pred">Sin pronóstico</span>';
+      const resultCell = hasOfficial ? `${m.scoreA} - ${m.scoreB}` : '<span class="no-pred">Pendiente</span>';
+      return `<tr>
+        <td class="hist-match">${escapeHtml(m.teamA)} vs ${escapeHtml(m.teamB)}</td>
+        <td class="hist-pred">${predCell}</td>
+        <td class="hist-result">${resultCell}</td>
+        <td class="hist-pts">${ptsBadge}</td>
+      </tr>`;
+    }).join('');
+    return `<tr class="hist-phase-row"><td colspan="4">${escapeHtml(phase)}</td></tr>${rows}`;
+  }).join('');
+
+  document.getElementById('hist-modal-name').textContent = `📋 ${participant.name}`;
+  document.getElementById('hist-modal-body').innerHTML = `
+    <div class="hist-summary">
+      <span class="hist-stat"><strong>${totalPreds}</strong> pronósticos</span>
+      <span class="hist-stat"><strong>${totalExacts}</strong> exactos</span>
+      <span class="hist-stat"><strong>+${totalPts}</strong> pts ganados</span>
+    </div>
+    <div class="hist-table-wrap">
+      <table class="hist-table">
+        <thead><tr>
+          <th>Partido</th><th>Mi pronóstico</th><th>Resultado</th><th>Pts</th>
+        </tr></thead>
+        <tbody>${phaseBlocks}</tbody>
+      </table>
+    </div>`;
+  document.getElementById('modal-history-overlay').classList.add('active');
+};
+
+window.closeHistoryModal = function() {
+  document.getElementById('modal-history-overlay').classList.remove('active');
+};
+
 function renderRanking() {
   const container = document.getElementById("sec-ranking");
   const scores = calculateScores();
@@ -1556,7 +1618,7 @@ function renderRanking() {
       <td class="rank-pos ${idx === 0 ? 'rank-first' : idx === 1 ? 'rank-second' : idx === 2 ? 'rank-third' : ''}">
         ${idx + 1}
       </td>
-      <td class="rank-name">${escapeHtml(p.name)}</td>
+      <td class="rank-name rank-name-link" onclick="showParticipantHistory('${p.id}')">${escapeHtml(p.name)}</td>
       <td style="text-align: center; font-weight: 500;">${p.matchPoints}</td>
       <td style="text-align: center; font-weight: 500;">${p.bonusPoints}</td>
       <td style="text-align: center; color: var(--accent-emerald); font-weight: 600;">${p.exacts}</td>
