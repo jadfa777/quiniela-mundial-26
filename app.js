@@ -1562,6 +1562,7 @@ function renderRanking() {
       <td style="text-align: center; color: var(--accent-emerald); font-weight: 600;">${p.exacts}</td>
       <td style="text-align: center; color: var(--accent-cyan); font-weight: 600;">${p.outcomes}</td>
       <td style="text-align: center; color: var(--accent-gold); font-weight: 600;">${p.qualifiers}</td>
+      <td><div class="form-badges">${getRecentFormBadges(p.id)}</div></td>
       <td style="text-align: right; font-weight: 800; font-size: 1.1rem; color: var(--accent-emerald)">
         ${p.total}
       </td>
@@ -1590,12 +1591,13 @@ function renderRanking() {
             <th style="text-align: center; width: 90px;">Exactos (3p)</th>
             <th style="text-align: center; width: 90px;">Signos (1p)</th>
             <th style="text-align: center; width: 90px;">Clasifica (2p)</th>
+            <th style="text-align: center; width: 140px;">Últimos 5</th>
             <th style="text-align: right; width: 100px;">Total Pts</th>
           </tr>
         </thead>
         <tbody>
           ${tableRows}
-          ${scores.length === 0 ? '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 3rem;">No hay registros de clasificación. Registra participantes y resultados.</td></tr>' : ''}
+          ${scores.length === 0 ? '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 3rem;">No hay registros de clasificación. Registra participantes y resultados.</td></tr>' : ''}
         </tbody>
       </table>
     </div>
@@ -1816,6 +1818,27 @@ function calcPredPoints(pred, m) {
   else if (predSign === m.sign) pts += state.config.outcome;
   if (m.phase !== "Grupos" && pred.winner && pred.winner === m.winner) pts += state.config.qualifier;
   return pts;
+}
+
+function getRecentFormBadges(participantId, count = 5) {
+  const pPreds = state.predictions[participantId] || {};
+  const finished = state.matches
+    .filter(m => m.scoreA !== null && m.scoreB !== null)
+    .sort((a, b) => (a.order || a.id) - (b.order || b.id));
+  const recent = finished.slice(-count);
+  if (recent.length === 0) return '<span class="form-empty">—</span>';
+  return recent.map(m => {
+    const pred = pPreds[m.id];
+    if (!pred || pred.scoreA === null || pred.scoreB === null) {
+      return '<span class="form-badge form-miss" title="Sin pronóstico">—</span>';
+    }
+    const pts = calcPredPoints(pred, m);
+    if (pts === null) return '<span class="form-badge form-miss" title="Sin datos">—</span>';
+    const label = pts > 0 ? `+${pts}` : '+0';
+    const cls = pts >= state.config.exactScore ? 'form-exact' : pts > 0 ? 'form-outcome' : 'form-zero';
+    const tip = `${m.teamA} ${m.scoreA}-${m.scoreB} ${m.teamB}`;
+    return `<span class="form-badge ${cls}" title="${escapeHtml(tip)}">${label}</span>`;
+  }).join('');
 }
 
 function renderOthersPreds(m, hasOfficial) {
