@@ -1618,7 +1618,7 @@ function renderRanking() {
       <td class="rank-pos ${idx === 0 ? 'rank-first' : idx === 1 ? 'rank-second' : idx === 2 ? 'rank-third' : ''}">
         ${idx + 1}
       </td>
-      <td class="rank-name rank-name-link" onclick="showParticipantHistory('${p.id}')">${escapeHtml(p.name)}</td>
+      <td class="rank-name rank-name-link" onclick="showParticipantHistory(${p.id})">${escapeHtml(p.name)}</td>
       <td style="text-align: center; font-weight: 500;">${p.matchPoints}</td>
       <td style="text-align: center; font-weight: 500;">${p.bonusPoints}</td>
       <td style="text-align: center; color: var(--accent-emerald); font-weight: 600;">${p.exacts}</td>
