@@ -705,6 +705,33 @@ window.goToPrediction = function(matchId) {
   });
 };
 
+function getMissingPredsWarning() {
+  if (!activePredictionParticipantId) return '';
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const pPreds = state.predictions[activePredictionParticipantId] || {};
+  const missing = state.matches.filter(m => {
+    if (m.date !== today) return false;
+    if (isMatchLocked(m)) return false;
+    const pred = pPreds[m.id];
+    return !pred || pred.scoreA === null || pred.scoreB === null;
+  });
+  if (missing.length === 0) return '';
+  const items = missing.map(m => `
+    <span class="warn-match" onclick="goToPrediction(${m.id})">
+      ${getFlag(m.teamA)} ${escapeHtml(m.teamA)} vs ${escapeHtml(m.teamB)} ${getFlag(m.teamB)}
+      <em>${formatMatchSchedule(m)}</em>
+    </span>`).join('');
+  return `
+    <div class="pred-warning">
+      <div class="pred-warning-icon">⚠️</div>
+      <div class="pred-warning-body">
+        <strong>¡Te falta pronosticar ${missing.length === 1 ? 'un partido de hoy' : `${missing.length} partidos de hoy`}!</strong>
+        <div class="warn-matches">${items}</div>
+      </div>
+    </div>`;
+}
+
 function renderDashboard() {
   const container = document.getElementById("sec-dashboard");
   
@@ -722,6 +749,7 @@ function renderDashboard() {
 
   // Render stats
   container.innerHTML = `
+    ${getMissingPredsWarning()}
     <div class="stats-grid">
       <div class="stat-card" style="--accent-color: var(--accent-cyan); --accent-color-glow: var(--accent-cyan-glow);">
         <div class="stat-icon">👥</div>
