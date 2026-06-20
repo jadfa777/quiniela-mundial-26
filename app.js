@@ -194,6 +194,7 @@ async function initApp() {
   db = firebase.firestore();
 
   document.body.style.opacity = "0.5";
+  let connectionOk = false;
   try {
     await loadOfficialMatches();
     const mainDoc = await mainRef().get();
@@ -215,17 +216,35 @@ async function initApp() {
       ]);
       assembleState(mainDoc.data(), partsSnap, predsSnap, bonusSnap, matchesSnap);
     }
+    connectionOk = true;
   } catch (e) {
     console.error("Error connecting to Firebase:", e);
-    showToast("Error de conexión. Verifica tu internet.", "error");
+    document.body.style.opacity = "1";
+    showConnectionError();
+    return;
   }
   document.body.style.opacity = "1";
 
+  if (!connectionOk) return;
   setupFirestoreListeners();
   setupEventListeners();
   updateNavigation();
   appInitialized = true;
   identifyUser();
+}
+
+function showConnectionError() {
+  const overlay = document.createElement("div");
+  overlay.id = "conn-error-overlay";
+  overlay.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,0.97);";
+  overlay.innerHTML = `
+    <div style="text-align:center;padding:2rem;max-width:340px;">
+      <div style="font-size:3rem;margin-bottom:1rem;">📡</div>
+      <h2 style="color:#f8fafc;font-size:1.2rem;margin-bottom:0.5rem;">Error de conexión</h2>
+      <p style="color:#94a3b8;font-size:0.9rem;margin-bottom:1.5rem;">No se pudo conectar con la base de datos. Verifica tu conexión a internet e inténtalo de nuevo.</p>
+      <button onclick="location.reload()" style="background:#10b981;color:#fff;border:none;padding:0.7rem 1.8rem;border-radius:8px;font-size:0.95rem;font-weight:600;cursor:pointer;">🔄 Reintentar</button>
+    </div>`;
+  document.body.appendChild(overlay);
 }
 
 function assembleState(mainData, partsSnap, predsSnap, bonusSnap, matchesSnap) {
@@ -442,9 +461,11 @@ function identifyUser() {
         switchTab("dashboard");
         return;
       }
+      // Only clear session if participants loaded OK but user not found (tampered/removed)
+      if (state.participants.length > 0) {
+        localStorage.removeItem("quinielaUser");
+      }
     } catch (e) {}
-    // Session invalid or tampered — clear and force re-login
-    localStorage.removeItem("quinielaUser");
   }
   showAuthScreen();
 }
