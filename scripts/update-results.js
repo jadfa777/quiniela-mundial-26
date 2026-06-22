@@ -94,9 +94,9 @@ async function main() {
 
   const ourMatches = matchesSnap.docs.map(d => d.data());
 
-  // Fetch finished/live matches from football-data.org
+  // Fetch finished matches from football-data.org — season=2026 avoids returning 2022 WC results
   const data = await fetchJSON(
-    'https://api.football-data.org/v4/competitions/WC/matches?status=FINISHED',
+    'https://api.football-data.org/v4/competitions/WC/matches?season=2026&status=FINISHED',
     token
   );
 
@@ -112,33 +112,50 @@ async function main() {
   for (const apiMatch of data.matches) {
     const homeSpanish = toSpanish(apiMatch.homeTeam?.name || '');
     const awaySpanish = toSpanish(apiMatch.awayTeam?.name || '');
-    const scoreHome = apiMatch.score?.fullTime?.home;
-    const scoreAway = apiMatch.score?.fullTime?.away;
+    let scoreHome = apiMatch.score?.fullTime?.home;
+    let scoreAway = apiMatch.score?.fullTime?.away;
 
     if (scoreHome === null || scoreHome === undefined ||
         scoreAway === null || scoreAway === undefined) continue;
 
-    // Match by team names
-    const ourMatch = ourMatches.find(m =>
+    // Match by team names (try both home/away orderings since API designation may differ from our JSON)
+    let ourMatch = ourMatches.find(m =>
       m.teamA === homeSpanish && m.teamB === awaySpanish
     );
+    let teamsSwapped = false;
+    if (!ourMatch) {
+      ourMatch = ourMatches.find(m =>
+        m.teamA === awaySpanish && m.teamB === homeSpanish
+      );
+      if (ourMatch) teamsSwapped = true;
+    }
+    if (teamsSwapped) {
+      // Swap scores to match our teamA/teamB order
+      [scoreHome, scoreAway] = [scoreAway, scoreHome];
+    }
 
     if (!ourMatch) {
       console.log(`No match found for: ${homeSpanish} vs ${awaySpanish}`);
       continue;
     }
 
-    // Skip if already has the correct score
-    if (ourMatch.scoreA === scoreHome && ourMatch.scoreB === scoreAway) continue;
+    // Skip if already has the correct score and sign
+    const sign = scoreHome > scoreAway ? '1' : scoreHome < scoreAway ? '2' : 'X';
+    if (ourMatch.scoreA === scoreHome && ourMatch.scoreB === scoreAway && ourMatch.sign === sign) continue;
+
+    // Compute winner for knockout stages using the API's official winner field
+    const updates = { scoreA: scoreHome, scoreB: scoreAway, sign };
+    if (ourMatch.phase !== 'Grupos') {
+      const apiWinner = apiMatch.score?.winner; // 'HOME_TEAM' | 'AWAY_TEAM' | 'DRAW'
+      if (apiWinner === 'HOME_TEAM') updates.winner = ourMatch.teamA;
+      else if (apiWinner === 'AWAY_TEAM') updates.winner = ourMatch.teamB;
+    }
 
     const matchId = String(ourMatch.id);
     await db.collection('quiniela').doc('main')
-      .collection('matches').doc(matchId).update({
-        scoreA: scoreHome,
-        scoreB: scoreAway,
-      });
+      .collection('matches').doc(matchId).update(updates);
 
-    console.log(`Updated match ${ourMatch.id}: ${homeSpanish} ${scoreHome}-${scoreAway} ${awaySpanish}`);
+    console.log(`Updated match ${ourMatch.id}: ${ourMatch.teamA} ${scoreHome}-${scoreAway} ${ourMatch.teamB} [${sign}]`);
     updated++;
   }
 
