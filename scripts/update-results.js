@@ -61,9 +61,11 @@ const TEAM_MAP = {
   'Tunisia': 'Túnez',
   'Uruguay': 'Uruguay',
   'Uzbekistan': 'Uzbekistán',
+  'IR Iran': 'Irán',
 };
 
 function toSpanish(name) {
+  if (!TEAM_MAP[name]) console.log(`WARNING: No TEAM_MAP entry for raw API name: "${name}"`);
   return TEAM_MAP[name] || name;
 }
 
