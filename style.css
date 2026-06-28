@@ -625,6 +625,29 @@ nav {
   cursor: not-allowed;
 }
 
+.qualifier-select-container.qualifier-required {
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.4);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  flex-wrap: wrap;
+}
+.qualifier-select-container.qualifier-required .qualifier-label {
+  color: #f59e0b;
+  font-weight: 600;
+}
+.qualifier-select-container.qualifier-required .qualifier-btn {
+  border-color: rgba(245,158,11,0.5);
+  color: var(--text-primary);
+}
+@keyframes qualifier-pulse {
+  0%, 100% { border-color: rgba(245,158,11,0.4); }
+  50%       { border-color: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.4); }
+}
+.qualifier-select-container.qualifier-required {
+  animation: qualifier-pulse 1.4s ease-in-out 3;
+}
+
 /* Custom Table (Leaderboard, config) */
 .table-responsive {
   width: 100%;
