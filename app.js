@@ -172,7 +172,9 @@ function mergeOfficialMatches(savedMatches = []) {
       scoreA: saved.scoreA ?? null,
       scoreB: saved.scoreB ?? null,
       sign: saved.sign || "",
-      winner: saved.winner || ""
+      winner: saved.winner || "",
+      penaltyA: saved.penaltyA ?? null,
+      penaltyB: saved.penaltyB ?? null
     };
 
     if (match.phase !== "Grupos") {
@@ -1086,6 +1088,19 @@ function renderMatches() {
               </div>
             </div>
 
+            ${isKnockout && isAdmin() ? `
+              <div class="penalty-score-row">
+                <span class="penalty-label">Penales (opcional):</span>
+                <input type="number" min="0" class="score-input penalty-score-a"
+                       value="${m.penaltyA !== null && m.penaltyA !== undefined ? m.penaltyA : ''}" placeholder="-"
+                       oninput="updateMatchScore(${m.id},'penaltyA',this.value)">
+                <span style="padding:0 4px;color:var(--text-muted)">-</span>
+                <input type="number" min="0" class="score-input penalty-score-b"
+                       value="${m.penaltyB !== null && m.penaltyB !== undefined ? m.penaltyB : ''}" placeholder="-"
+                       oninput="updateMatchScore(${m.id},'penaltyB',this.value)">
+              </div>
+            ` : ''}
+
             ${isKnockout ? `
               <div class="qualifier-select-container">
                 <span>Clasifica:</span>
@@ -1137,6 +1152,7 @@ window.updateMatchScore = function(matchId, field, value) {
   const m = state.matches.find(item => item.id === matchId);
   if (!m) return;
   m[field] = value === "" ? null : parseInt(value);
+  if (field === "penaltyA" || field === "penaltyB") return;
   if (m.scoreA !== null && m.scoreB !== null) {
     if (m.scoreA > m.scoreB) m.sign = "1";
     else if (m.scoreA < m.scoreB) m.sign = "2";
@@ -1389,7 +1405,7 @@ function renderPredictions() {
             <div class="match-footer">
               <span class="real-score-indicator">
                 ${m.venue ? `${m.venue} · ` : ''}Real:
-                <span class="real-score-badge">${hasOfficial ? `${m.scoreA} - ${m.scoreB}` : 'Pendiente'}</span>
+                <span class="real-score-badge">${hasOfficial ? `${m.scoreA} - ${m.scoreB}${isKnockout && m.penaltyA !== null && m.penaltyA !== undefined ? ` <span class="penalty-badge">(pen. ${m.penaltyA}-${m.penaltyB})</span>` : ''}` : 'Pendiente'}</span>
                 ${hasOfficial && isKnockout ? `<span style="font-weight: 500; font-size:0.7rem;">(${m.winner})</span>` : ''}
               </span>
               ${hasOfficial ? `
@@ -1626,7 +1642,8 @@ window.showParticipantHistory = function(participantId) {
         : hasPred
           ? `${pred.scoreA} - ${pred.scoreB}${m.phase !== 'Grupos' && pred.winner ? ` <em class="hist-winner">(${escapeHtml(pred.winner)})</em>` : ''}`
           : '<span class="no-pred">Sin pronóstico</span>';
-      const resultCell = hasOfficial ? `${m.scoreA} - ${m.scoreB}` : '<span class="no-pred">Pendiente</span>';
+      const penStr = (hasOfficial && m.phase !== "Grupos" && m.penaltyA !== null && m.penaltyA !== undefined) ? ` (pen. ${m.penaltyA}-${m.penaltyB})` : '';
+      const resultCell = hasOfficial ? `${m.scoreA} - ${m.scoreB}${penStr}` : '<span class="no-pred">Pendiente</span>';
       return `<tr>
         <td class="hist-match">${escapeHtml(m.teamA)} vs ${escapeHtml(m.teamB)}</td>
         <td class="hist-pred">${predCell}</td>

@@ -648,6 +648,30 @@ nav {
   animation: qualifier-pulse 1.4s ease-in-out 3;
 }
 
+.penalty-score-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+}
+.penalty-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.penalty-score-row .score-input {
+  width: 44px;
+  font-size: 0.8rem;
+  padding: 0.15rem 0.3rem;
+  text-align: center;
+}
+.penalty-badge {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
 /* Custom Table (Leaderboard, config) */
 .table-responsive {
   width: 100%;
