@@ -15,7 +15,6 @@ const TEAM_MAP = {
   'Cabo Verde': 'Cabo Verde',
   'Cape Verde': 'Cabo Verde',
   'Cape Verde Islands': 'Cabo Verde',
-  'Cape Verde Islands': 'Cabo Verde',
   'Canada': 'Canadá',
   'Colombia': 'Colombia',
   'Korea Republic': 'Corea del Sur',
@@ -117,8 +116,31 @@ async function main() {
   for (const apiMatch of data.matches) {
     const homeSpanish = toSpanish(apiMatch.homeTeam?.name || '');
     const awaySpanish = toSpanish(apiMatch.awayTeam?.name || '');
-    let scoreHome = apiMatch.score?.fullTime?.home;
-    let scoreAway = apiMatch.score?.fullTime?.away;
+
+    // duration: 'REGULAR' | 'EXTRA_TIME' | 'PENALTY_SHOOTOUT'
+    const duration = apiMatch.score?.duration;
+
+    // Use regularTime (90 min result) when match went to ET or penalties.
+    // fullTime includes extra time goals, so it would be unfair to draw predictors.
+    let scoreHome, scoreAway;
+    if (
+      (duration === 'EXTRA_TIME' || duration === 'PENALTY_SHOOTOUT') &&
+      apiMatch.score?.regularTime?.home !== null &&
+      apiMatch.score?.regularTime?.home !== undefined
+    ) {
+      scoreHome = apiMatch.score.regularTime.home;
+      scoreAway = apiMatch.score.regularTime.away;
+    } else {
+      scoreHome = apiMatch.score?.fullTime?.home;
+      scoreAway = apiMatch.score?.fullTime?.away;
+    }
+
+    // Penalty shootout scores (separate from the match result)
+    let penaltyHome = null, penaltyAway = null;
+    if (duration === 'PENALTY_SHOOTOUT') {
+      penaltyHome = apiMatch.score?.penalties?.home ?? null;
+      penaltyAway = apiMatch.score?.penalties?.away ?? null;
+    }
 
     if (scoreHome === null || scoreHome === undefined ||
         scoreAway === null || scoreAway === undefined) continue;
@@ -134,33 +156,49 @@ async function main() {
       );
       if (ourMatch) teamsSwapped = true;
     }
-    if (teamsSwapped) {
-      // Swap scores to match our teamA/teamB order
-      [scoreHome, scoreAway] = [scoreAway, scoreHome];
-    }
 
     if (!ourMatch) {
       console.log(`No match found for: ${homeSpanish} vs ${awaySpanish}`);
       continue;
     }
 
-    // Skip if already has the correct score and sign
-    const sign = scoreHome > scoreAway ? '1' : scoreHome < scoreAway ? '2' : 'X';
-    if (ourMatch.scoreA === scoreHome && ourMatch.scoreB === scoreAway && ourMatch.sign === sign) continue;
+    if (teamsSwapped) {
+      // Swap scores to match our teamA/teamB order
+      [scoreHome, scoreAway] = [scoreAway, scoreHome];
+      if (penaltyHome !== null) [penaltyHome, penaltyAway] = [penaltyAway, penaltyHome];
+    }
 
-    // Compute winner for knockout stages using the API's official winner field
+    const sign = scoreHome > scoreAway ? '1' : scoreHome < scoreAway ? '2' : 'X';
+
+    // Skip if already up to date (score, sign and penalties)
+    const alreadyUpToDate =
+      ourMatch.scoreA === scoreHome &&
+      ourMatch.scoreB === scoreAway &&
+      ourMatch.sign === sign &&
+      (penaltyHome === null || (ourMatch.penaltyA === penaltyHome && ourMatch.penaltyB === penaltyAway));
+    if (alreadyUpToDate) continue;
+
     const updates = { scoreA: scoreHome, scoreB: scoreAway, sign };
+
     if (ourMatch.phase !== 'Grupos') {
+      // Fix: account for swapped teams when assigning winner
       const apiWinner = apiMatch.score?.winner; // 'HOME_TEAM' | 'AWAY_TEAM' | 'DRAW'
-      if (apiWinner === 'HOME_TEAM') updates.winner = ourMatch.teamA;
-      else if (apiWinner === 'AWAY_TEAM') updates.winner = ourMatch.teamB;
+      if (apiWinner === 'HOME_TEAM') updates.winner = teamsSwapped ? ourMatch.teamB : ourMatch.teamA;
+      else if (apiWinner === 'AWAY_TEAM') updates.winner = teamsSwapped ? ourMatch.teamA : ourMatch.teamB;
+
+      // Store penalty shootout scores if available
+      if (penaltyHome !== null) {
+        updates.penaltyA = penaltyHome;
+        updates.penaltyB = penaltyAway;
+      }
     }
 
     const matchId = String(ourMatch.id);
     await db.collection('quiniela').doc('main')
       .collection('matches').doc(matchId).update(updates);
 
-    console.log(`Updated match ${ourMatch.id}: ${ourMatch.teamA} ${scoreHome}-${scoreAway} ${ourMatch.teamB} [${sign}]`);
+    const penLog = penaltyHome !== null ? ` (pen. ${penaltyHome}-${penaltyAway})` : '';
+    console.log(`Updated match ${ourMatch.id}: ${ourMatch.teamA} ${scoreHome}-${scoreAway}${penLog} ${ourMatch.teamB} [${sign}]`);
     updated++;
   }
 
